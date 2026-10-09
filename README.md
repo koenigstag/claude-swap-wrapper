@@ -93,15 +93,17 @@ checked for presence, and then replaced with the session profile path.
 invalidates the other. Keep a different account as the default login than the ones your mapped workspaces use.
 [Claude Swap Desktop](https://github.com/koenigstag/claude-swap-desktop) warns when they overlap.
 
-## Build and install
+## Install
 
-Requires the .NET 6 SDK.
+Download `claude-swap-wrapper.exe` from the [latest release](https://github.com/koenigstag/claude-swap-wrapper/releases/latest).
+It's a single native exe (win-x64) with no .NET runtime needed. Check it against `SHA256SUMS.txt` from the same
+release:
 
 ```bash
-dotnet publish -c Release -o publish
+(Get-FileHash .\claude-swap-wrapper.exe -Algorithm SHA256).Hash
 ```
 
-Copy the contents of `publish/` to `%USERPROFILE%\.local\bin\claude-swap-wrapper\`, then in VS Code user settings:
+Put it in a folder of your choice, e.g. `%USERPROFILE%\.local\bin\claude-swap-wrapper\`, then in VS Code user settings:
 
 ```json
 "claudeCode.claudeProcessWrapper": "C:\\Users\\<you>\\.local\\bin\\claude-swap-wrapper\\claude-swap-wrapper.exe"
@@ -112,6 +114,22 @@ them first (Windows allows renaming a running exe), then copy the new ones in.
 
 Keep the default login (`claude-swap switch`) on an account that no mapped folder uses. See
 [FINDINGS.md](FINDINGS.md) for why.
+
+## Build from source
+
+Requires the .NET 10 SDK.
+
+- Native single exe, like the releases (also needs the MSVC C++ build tools):
+  ```bash
+  dotnet publish -c Release -r win-x64 -p:PublishAot=true -o publish
+  ```
+- Or framework-dependent (needs the .NET 10 runtime wherever it runs):
+  ```bash
+  dotnet publish -c Release -o publish
+  ```
+
+Releases are built by [GitHub Actions](.github/workflows/release.yml). Pushing a tag like `v1.2.3` builds the exe, runs a
+dry-run smoke test and creates a draft release with `claude-swap-wrapper.exe` and `SHA256SUMS.txt`.
 
 ## History
 

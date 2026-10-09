@@ -2,10 +2,15 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>claude_swap_wrapper</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <!-- Culture data isn't needed (paths are compared with ToLowerInvariant); smaller and AOT-friendly. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Release builds: dotnet publish -r win-x64 -p:PublishAot=true (see README). -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
 </Project>

@@ -1,0 +1,60 @@
+name: Build and release
+
+# Manual runs build and test only; pushing a tag like v1.2.3 also creates a
+# draft GitHub release with the exe attached (published by hand after review).
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish (native AOT, win-x64)
+        run: dotnet publish claude-swap-wrapper.csproj -c Release -r win-x64 -p:PublishAot=true -o publish
+
+      - name: Smoke test (dry run in an unmapped folder)
+        shell: pwsh
+        run: |
+          $env:CSWAP_WRAPPER_DRYRUN = '1'
+          $out = & .\publish\claude-swap-wrapper.exe C:\Windows\System32\cmd.exe
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0 -or $out -notmatch '^direct: ') { throw "unexpected dry-run result: $out" }
+          $exe = Get-Item .\publish\claude-swap-wrapper.exe
+          Write-Host ("exe size: {0:N0} bytes, version {1}" -f $exe.Length, $exe.VersionInfo.ProductVersion)
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item .\publish\claude-swap-wrapper.exe dist\
+          Push-Location dist
+          "{0}  claude-swap-wrapper.exe" -f (Get-FileHash claude-swap-wrapper.exe -Algorithm SHA256).Hash.ToLower() |
+            Set-Content -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          Pop-Location
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: claude-swap-wrapper-win-x64
+          path: dist/*
+
+      - name: Create draft release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create $env:GITHUB_REF_NAME dist/claude-swap-wrapper.exe dist/SHA256SUMS.txt
+          --draft --verify-tag --title "claude-swap-wrapper $env:GITHUB_REF_NAME"
+          --notes "Draft created by the build workflow."
